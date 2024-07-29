@@ -58,7 +58,7 @@ controls.dampingFactor = 0.25;
 
 // IcosahedronGeometry(radius, detail) -> detail is the number of times the geometry is subdivided 
 // The higher the detail, the more the geometry is subdivided -> more the geometry is smooth
-const geo = new THREE.IcosahedronGeometry(1.0,  14);
+const geo = new THREE.IcosahedronGeometry(1.0,  14cd );
 
 // Load a texture
 // https://threejs.org/docs/#api/en/textures/Texture
