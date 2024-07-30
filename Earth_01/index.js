@@ -1,3 +1,4 @@
+// Texture -> https://www.solarsystemscope.com/textures/
 // Step by step guide to create Earth reproduction with Three.js
 // 1. import necessary modules
 // 2. Grab height and width of the window
@@ -10,22 +11,29 @@
 // 9. Add damping to the controls -> controls.enableDamping = true -> to make the camera move smoothly
 // 10. Add factor to the damping -> controls.dampingFactor = 0.25 -> to make the camera move smoothly
 // 11. IcosahedronGeometry(radius, detail) -> detail is the number of times the geometry is subdivided
-// 12. Load a texture -> loader.load('./public/earthmap1k.jpg')
-// 13. Add Material on this Geometry -> MeshStandardMaterial({ map: loader.load('./public/earthmap1k.jpg') }) -> we use MeshStandardMaterial to use the texture
-// 14. Set up Mesh -> Mesh(geometry, material) -> Mesh is an object that takes a geometry, and applies a material to it
+// 12. Load a texture
+// 13. Add Material on this Geometry
+// 14. Set up Mesh -> Mesh(geometry, material)
 // 15. Add the mesh to the scene
-// 16. Need to add light to use the MeshStandardMaterial -> HemisphereLight(skyColor, groundColor, intensity)
-// 17. Animation Loop -> make it turn on itself
-// 18. requestAnimationFrame(callback) -> callback is the function to be called
-// 19. mesh.rotation.y += 0.001; -> make the mesh turn on itself
-// 20. renderer.render(scene, camera); -> Render must be called every time the scene changes
-// 21. Update the controls to move the camera around the object -> controls.update();
-// 22. animate(); -> call the animate function
-
+// 16. Need to add light to the black side of the earth
+// 17. Need to add Clouds
+// 18. Add fresnel effect to the earth
+// 19. Add stars to the scene
+// 20. Need to add light to use the MeshStandardMaterial
+// 21. Animation Loop -> make it turn on itself
+// 22. requestAnimationFrame(callback) -> callback is the function to be called
+// 23. Update the controls to move the camera around the object
+// 24. Render the scene -> render(scene, camera)
+// 25. Update the camera aspect ratio when the window is resized
+// 26. Add an event listener to the window to handle the resize event
+// 27. Call the handleWindowResize function when the window is resized
+// 28. Add the event listener to the window
 
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { getFresnelMat } from './src/getFresnelMat';
+import getStarfield from './src/getStarfield';
 
 // Grab height and width of the window
 const w = window.innerWidth;
@@ -38,7 +46,7 @@ document.body.appendChild(renderer.domElement);
 //  Set up Camera -> Camera(fov, aspect ratio, near, far)
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 10);
 // Set the position of the camera, more the z value is, more the camera is far from the object
-camera.position.z = 5
+camera.position.z = 4
 // Create a scene
 const scene = new THREE.Scene();
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -64,7 +72,9 @@ const loader = new THREE.TextureLoader();
 const mat = new THREE.MeshPhongMaterial({ 
   // import the texture as a map
   map: loader.load('./earthmap1k.jpg'),
-  // bumpScale: 0.04,
+  specularMap: loader.load("./earthspec1k.jpg"),
+  bumpMap: loader.load("./earthbump1k.jpg"),
+  bumpScale: 0.04,
 });
 // Set up Mesh -> Mesh(geometry, material)
 // Mesh is an object that takes a geometry, and applies a material to it
@@ -77,10 +87,31 @@ const lightMat= new THREE.MeshBasicMaterial({
   blending: THREE.AdditiveBlending,
 })
 const lightMesh = new THREE.Mesh(geo, lightMat);
+lightMesh.scale.setScalar(1.000002);
 earthGroup.add(lightMesh);
-// Need to add light to use the MeshStandardMaterial
-const sunColor = 0xffffff;
-const sunLight = new THREE.DirectionalLight(sunColor, 2.0);
+// Need to add Clouds
+const cloudMat = new THREE.MeshStandardMaterial({
+  map: loader.load('./earthcloudmap.jpg'),
+  // transparent: true,
+  opacity: 0.9,
+  blending: THREE.AdditiveBlending,
+  alphaMap: loader.load('./earthcloudmaptrans.jpg'),
+});
+const cloudMesh = new THREE.Mesh(geo, cloudMat);
+cloudMesh.scale.setScalar(1.03);
+earthGroup.add(cloudMesh);
+// Add fresnel effect to the earth
+const fresnelMat = getFresnelMat();
+const fresnelMesh = new THREE.Mesh(geo, fresnelMat);
+fresnelMesh.scale.setScalar(1.003);
+earthGroup.add(fresnelMesh);
+// Add stars to the scene
+const stars = getStarfield({numStars: 2500});
+stars.scale.setScalar(0.1);
+scene.add(stars);
+// Add light to use the MeshStandardMaterial
+const sunColor = 0xffffffff;
+const sunLight = new THREE.DirectionalLight(sunColor, 2);
 sunLight.position.set(-2, 0.5, 1.5);
 scene.add(sunLight);
 // Animation Loop -> make it turn on itself
@@ -88,15 +119,21 @@ function animate() {
   // requestAnimationFrame(callback) -> callback is the function to be called
   // This function tells the browser that you wish to perform an animation and requests that the browser call a specified function to update an animation before the next repaint
   requestAnimationFrame(animate);
-  // mesh.rotation.x += 0.001;
   earthMesh.rotation.y += 0.0022;
   lightMesh.rotation.y += 0.0022;
-  // mesh.rotation.z += 0.001;
+  cloudMesh.rotation.y += 0.0022;
+  fresnelMesh.rotation.y += 0.0022;
+  stars.rotation.y += 0.0005;
   renderer.render(scene, camera);
   // Update the controls to move the camera around the object
   controls.update();
 } 
-
 animate();
 // Render the scene -> render(scene, camera) Render must be called every time the scene changes
-// renderer.render(scene, camera);
+renderer.render(scene, camera);
+function handleWindowResize () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', handleWindowResize, false);
