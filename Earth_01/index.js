@@ -38,9 +38,11 @@ document.body.appendChild(renderer.domElement);
 //  Set up Camera -> Camera(fov, aspect ratio, near, far)
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 10);
 // Set the position of the camera, more the z value is, more the camera is far from the object
-camera.position.z = 3
+camera.position.z = 5
 // Create a scene
 const scene = new THREE.Scene();
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 // Add earthGroup to the scene -> to make the earth turn on itself with the right axis
 const earthGroup = new THREE.Group();
 earthGroup.rotation.y = -23.4 * Math.PI / 180;
@@ -53,25 +55,32 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.25;
 // IcosahedronGeometry(radius, detail) -> detail is the number of times the geometry is subdivided 
 // The higher the detail, the more the geometry is subdivided -> more the geometry is smooth
-const geo = new THREE.IcosahedronGeometry(1.0,  14);
+const geo = new THREE.IcosahedronGeometry(1,  25);
 // Load a texture
 // https://threejs.org/docs/#api/en/textures/Texture
 const loader = new THREE.TextureLoader();
 // Add Material on this Geometry
 // https://threejs.org/docs/#api/en/materials/MeshBasicMaterial.aoMapIntensity
-const mat = new THREE.MeshStandardMaterial({ 
+const mat = new THREE.MeshPhongMaterial({ 
   // import the texture as a map
-  map: loader.load('./earthlights1k.jpg'),
   map: loader.load('./earthmap1k.jpg'),
+  // bumpScale: 0.04,
 });
 // Set up Mesh -> Mesh(geometry, material)
 // Mesh is an object that takes a geometry, and applies a material to it
-const mesh = new THREE.Mesh(geo, mat); 
+const earthMesh = new THREE.Mesh(geo, mat); 
 // Add the mesh to the scene
-earthGroup.add(mesh);
+earthGroup.add(earthMesh);
+// Need to add light to the black side of the earth
+const lightMat= new THREE.MeshBasicMaterial({
+  map: loader.load('./earthlights1k.jpg'),
+  blending: THREE.AdditiveBlending,
+})
+const lightMesh = new THREE.Mesh(geo, lightMat);
+earthGroup.add(lightMesh);
 // Need to add light to use the MeshStandardMaterial
 const sunColor = 0xffffff;
-const sunLight = new THREE.DirectionalLight(sunColor, 1);
+const sunLight = new THREE.DirectionalLight(sunColor, 2.0);
 sunLight.position.set(-2, 0.5, 1.5);
 scene.add(sunLight);
 // Animation Loop -> make it turn on itself
@@ -80,7 +89,8 @@ function animate() {
   // This function tells the browser that you wish to perform an animation and requests that the browser call a specified function to update an animation before the next repaint
   requestAnimationFrame(animate);
   // mesh.rotation.x += 0.001;
-  mesh.rotation.y += 0.001;
+  earthMesh.rotation.y += 0.0022;
+  lightMesh.rotation.y += 0.0022;
   // mesh.rotation.z += 0.001;
   renderer.render(scene, camera);
   // Update the controls to move the camera around the object
@@ -89,4 +99,4 @@ function animate() {
 
 animate();
 // Render the scene -> render(scene, camera) Render must be called every time the scene changes
-renderer.render(scene, camera);
+// renderer.render(scene, camera);
